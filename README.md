@@ -45,7 +45,7 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/nginx` - Application data
+- `./volumes/data/nginx` - Application data
 
 ## 🔍 Logging
 
