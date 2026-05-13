@@ -17,6 +17,8 @@ services:
     logging: *default-logging
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: nginx-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
       ERRORS: 0
       GIT_USE_SSH: 1
       REMOVE_FILES: 0
@@ -34,8 +36,30 @@ services:
       - '/var/www/nginx/domains/${BASE_HOST_NAME:-$HOSTNAME}:/var/www/html'
     networks:
       - nginx
+      - proxy
+      - cloudflare
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://nginx-app:80'
+      - 'cloudflare.hostname=nginx.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.nginx-app.entrypoints=http'
+      - 'traefik.http.routers.nginx-app-secure.tls=true'
+      - 'traefik.http.routers.nginx-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.nginx-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.nginx-app.middlewares=nginx-app-https-redirect'
+      - 'traefik.http.routers.nginx-app-secure.entrypoints=https'
+      - 'traefik.http.routers.nginx-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.nginx-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.nginx-app-secure.service=nginx-app'
+      - 'traefik.http.services.nginx-app.loadbalancer.server.port=80'
 
 networks:
   nginx:
     name: nginx
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
