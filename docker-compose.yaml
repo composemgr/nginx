@@ -1,6 +1,6 @@
-# nginx proxy address - http://172.17.0.1:59049
+# nginx proxy address - http://172.17.0.1:64271
 
-name: nginx-fpm
+name: nginx
 x-logging: &default-logging
   options:
     max-size: '5m'
@@ -11,6 +11,7 @@ services:
   app:
     image: richarvey/nginx-php-fpm:latest
     container_name: nginx-app
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
     hostname: ${BASE_HOST_NAME:-$HOSTNAME}
     restart: always
     pull_policy: always
@@ -19,47 +20,31 @@ services:
       TZ: ${TZ:-America/New_York}
       CONTAINER_NAME: nginx-app
       HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+      # PHP error display
       ERRORS: 0
+      PHP_ERRORS_STDERR: 1
+      # Version control
       GIT_USE_SSH: 1
       REMOVE_FILES: 0
+      # Client IP handling
       REAL_IP_HEADER: 1
+      # Document root
       DOMAIN: ${BASE_HOST_NAME:-$HOSTNAME}
-      PHP_ERRORS_STDERR: 1
-      HIDE_NGINX_HEADERS: 1
+      # Upload limits
       PHP_POST_MAX_SIZE: 256m
-      APPLICATION_ENV: production
       PHP_UPLOAD_MAX_FILESIZE: 1024m
+      # Response headers
+      HIDE_NGINX_HEADERS: 1
+      APPLICATION_ENV: production
     ports:
-      - 172.17.0.1:59049:80
+      - '172.17.0.1:64271:80'
     volumes:
-      - '/etc/letsencrypt:/etc/letsencrypt'
-      - '/var/www/nginx/domains/${BASE_HOST_NAME:-$HOSTNAME}:/var/www/html'
+      - '/etc/letsencrypt:/etc/letsencrypt:z'
+      - '/var/www/nginx/domains/${BASE_HOST_NAME:-$HOSTNAME}:/var/www/html:z'
     networks:
       - nginx
-      - proxy
-      - cloudflare
-    labels:
-      - 'traefik.enable=true'
-      - 'cloudflare.enable=true'
-      - 'traefik.docker.network=proxy'
-      - 'cloudflare.service=http://nginx-app:80'
-      - 'cloudflare.hostname=nginx.${CLOUDFLARE_ZONE_NAME:-}'
-      - 'traefik.http.routers.nginx-app.entrypoints=http'
-      - 'traefik.http.routers.nginx-app-secure.tls=true'
-      - 'traefik.http.routers.nginx-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.middlewares.nginx-app-https-redirect.redirectscheme.scheme=https'
-      - 'traefik.http.routers.nginx-app.middlewares=nginx-app-https-redirect'
-      - 'traefik.http.routers.nginx-app-secure.entrypoints=https'
-      - 'traefik.http.routers.nginx-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.routers.nginx-app-secure.tls.certresolver=cloudflare'
-      - 'traefik.http.routers.nginx-app-secure.service=nginx-app'
-      - 'traefik.http.services.nginx-app.loadbalancer.server.port=80'
 
 networks:
   nginx:
     name: nginx
     external: false
-  proxy:
-    external: true
-  cloudflare:
-    external: true
