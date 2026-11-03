@@ -36,6 +36,12 @@ services:
       # Response headers
       HIDE_NGINX_HEADERS: 1
       APPLICATION_ENV: production
+    healthcheck:
+      test: ['CMD', 'curl', '-s', '-o', '/dev/null', '--max-time', '5', 'http://127.0.0.1:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     ports:
       - '172.17.0.1:64271:80'
     volumes:
